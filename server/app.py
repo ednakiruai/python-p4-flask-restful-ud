@@ -3,6 +3,7 @@
 from flask import Flask, request, make_response
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
+from werkzeug.exceptions import NotFound
 
 from models import db, Newsletter
 
@@ -16,7 +17,7 @@ db.init_app(app)
 
 api = Api(app)
 
-class Home(Resource):
+class Index(Resource):
 
     def get(self):
         
@@ -31,7 +32,7 @@ class Home(Resource):
 
         return response
 
-api.add_resource(Home, '/')
+api.add_resource(Index, '/')
 
 class Newsletters(Resource):
 
@@ -79,6 +80,28 @@ class NewsletterByID(Resource):
         )
 
         return response
+    
+    def patch(self, id):
+        newsletter = Newsletter.query.filter_by(id=id).first()
+        
+        data = request.form
+        for attr in data:
+            setattr(newsletter, attr, data.get(attr))
+            
+        db.session.add(newsletter)
+        db.session.commit()
+        
+        response_dict = newsletter.to_dict()
+        
+        return make_response(response_dict, 200)
+    
+    def delete(self, id):
+        newsletter = Newsletter.query.filter_by(id=id).first()
+        
+        db.session.delete(newsletter)
+        db.session.commit()
+        
+        return make_response({'message': 'record successfully deleted'}, 200)
 
 api.add_resource(NewsletterByID, '/newsletters/<int:id>')
 
